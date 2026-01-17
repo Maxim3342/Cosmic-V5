@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="game-page">
+    <div class="game-header">
+        <h1><i class="fas fa-rocket"></i> Миссия: Выжить в радиации</h1>
+        <div class="game-stats">
+            <div class="stat">
+                <span class="stat-label"><i class="fas fa-radiation-alt"></i> Фон радиации:</span>
+                <span class="stat-value" id="radiation-level">0.0001</span>
+                <span class="stat-unit">мГр/ч</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label"><i class="fas fa-history"></i> Полученная доза:</span>
+                <span class="stat-value" id="total-dose">0.000</span>
+                <span class="stat-unit">Гр</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label"><i class="far fa-clock"></i> Время в полете:</span>
+                <span class="stat-value" id="mission-time">00:00:00</span>
+            </div>
+            <div class="stat">
+                <button class="btn btn-help" id="help-btn"><i class="fas fa-question-circle"></i> Как играть?</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="game-container">
+        <div class="game-canvas-container">
+            <canvas id="gameCanvas" width="1200" height="700"></canvas>
+            <div class="game-overlay" id="warning-overlay">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Осторожно! Опасность лучевой болезни!</h3>
+                <p>Уровень радиации приближается к опасному. Рекомендуется изменить траекторию.</p>
+            </div>
+            <div class="game-overlay fatal" id="fatal-overlay">
+                <i class="fas fa-skull-crossbones"></i>
+                <h3>Экипаж погиб. Ракета переведена в авторежим.</h3>
+                <p>Суммарная доза радиации превысила смертельный порог.</p>
+                <button class="btn btn-restart" id="restart-btn">Начать новую миссию</button>
+            </div>
+        </div>
+        
+        <div class="game-controls">
+            <div class="control-group">
+                <h3><i class="fas fa-play-circle"></i> Старт миссии</h3>
+                <p>Выберите планету для начала:</p>
+                <div class="planet-buttons-grid">
+                    <button class="planet-btn" data-planet="earth">
+                        <i class="fas fa-globe-americas"></i>
+                        <span>Земля</span>
+                        <small>0.1 мГр/ч</small>
+                    </button>
+                    <button class="planet-btn" data-planet="mars">
+                        <i class="fas fa-globe-asia"></i>
+                        <span>Марс</span>
+                        <small>0.4 мГр/ч</small>
+                    </button>
+                    <button class="planet-btn" data-planet="moon">
+                        <i class="fas fa-moon"></i>
+                        <span>Луна</span>
+                        <small>0.3 мГр/ч</small>
+                    </button>
+                    <button class="planet-btn" data-planet="iss">
+                        <i class="fas fa-satellite"></i>
+                        <span>МКС</span>
+                        <small>0.5 мГр/ч</small>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3><i class="fas fa-bullseye"></i> Выбор цели</h3>
+                <div class="status-box">
+                    <p id="status-text">Выберите стартовую позицию</p>
+                </div>
+                <div class="target-buttons-grid">
+                    <button class="target-btn" data-target="mercury">
+                        <i class="fas fa-circle" style="color: #A9A9A9;"></i>
+                        <span>Меркурий</span>
+                    </button>
+                    <button class="target-btn" data-target="venus">
+                        <i class="fas fa-circle" style="color: #FFA500;"></i>
+                        <span>Венера</span>
+                    </button>
+                    <button class="target-btn" data-target="earth">
+                        <i class="fas fa-circle" style="color: #1E90FF;"></i>
+                        <span>Земля</span>
+                    </button>
+                    <button class="target-btn" data-target="mars">
+                        <i class="fas fa-circle" style="color: #FF4500;"></i>
+                        <span>Марс</span>
+                    </button>
+                    <button class="target-btn" data-target="jupiter">
+                        <i class="fas fa-circle" style="color: #FFA07A;"></i>
+                        <span>Юпитер</span>
+                    </button>
+                    <button class="target-btn" data-target="saturn">
+                        <i class="fas fa-circle" style="color: #F0E68C;"></i>
+                        <span>Сатурн</span>
+                    </button>
+                    <button class="target-btn" data-target="moon">
+                        <i class="fas fa-circle" style="color: #C0C0C0;"></i>
+                        <span>Луна</span>
+                    </button>
+                    <button class="target-btn" data-target="iss">
+                        <i class="fas fa-circle" style="color: #FFFFFF;"></i>
+                        <span>МКС</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3><i class="fas fa-chart-line"></i> Шкала радиации</h3>
+                <div class="radiation-scale">
+                    <div class="scale-item safe">
+                        <div class="scale-color"></div>
+                        <span>0-0.1 мГр/ч</span>
+                        <small>Безопасно</small>
+                    </div>
+                    <div class="scale-item low">
+                        <div class="scale-color"></div>
+                        <span>0.1-1 мГр/ч</span>
+                        <small>Низкий риск</small>
+                    </div>
+                    <div class="scale-item medium">
+                        <div class="scale-color"></div>
+                        <span>1-10 мГр/ч</span>
+                        <small>Опасно</small>
+                    </div>
+                    <div class="scale-item high">
+                        <div class="scale-color"></div>
+                        <span>10-100 мГр/ч</span>
+                        <small>Очень опасно</small>
+                    </div>
+                    <div class="scale-item extreme">
+                        <div class="scale-color"></div>
+                        <span>100+ мГр/ч</span>
+                        <small>Смертельно</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3><i class="fas fa-cogs"></i> Управление</h3>
+                <div class="action-buttons">
+                    <button class="btn btn-action" id="land-btn" disabled>
+                        <i class="fas fa-flag-checkered"></i>
+                        <span>Завершить миссию</span>
+                    </button>
+                    <button class="btn btn-action" id="pause-btn">
+                        <i class="fas fa-pause"></i>
+                        <span>Пауза</span>
+                    </button>
+                    <button class="btn btn-action" id="speed-btn">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Скорость игры: 1x</span>
+                    </button>
+                    <button class="btn btn-action" id="auto-btn">
+                        <i class="fas fa-robot"></i>
+                        <span>Автополет, пока не реализован</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3><i class="fas fa-info-circle"></i> Текущее состояние</h3>
+                <div class="state-info">
+                    <div class="state-item">
+                        <span class="state-label">Положение:</span>
+                        <span class="state-value" id="position-info">Не задано</span>
+                    </div>
+                    <div class="state-item">
+                        <span class="state-label">Скорость:</span>
+                        <span class="state-value" id="speed-info">0 км/с</span>
+                    </div>
+                    <div class="state-item">
+                        <span class="state-label">Цель:</span>
+                        <span class="state-value" id="target-info">Не задана</span>
+                    </div>
+                    <div class="state-item">
+                        <span class="state-label">Защита:</span>
+                        <span class="state-value" id="shield-info">100%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно помощи -->
+    <div class="modal" id="help-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-question-circle"></i> Как играть?</h2>
+                <button class="modal-close" id="close-help">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>1. Выберите планету для старта из верхней панели кнопок</p>
+                <p>2. Выберите цель полета из среднего набора кнопок</p>
+                <p>3. Следите за уровнем радиации и накопленной дозой</p>
+                <p>4. Для завершения миссии нажмите "Завершить миссию"</p>
+                <p><strong>Цель:</strong> доставить ракету на другую планету с минимальной дозой радиации</p>
+                
+                <div class="tips">
+                    <h3><i class="fas fa-lightbulb"></i> Советы:</h3>
+                    <ul>
+                        <li>Прямой полет к Юпитеру наиболее опасен</li>
+                        <li>Завершайте миссию до достижения 1 Гр дозы</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно результатов -->
+    <div class="modal" id="results-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-medal"></i> Результаты миссии</h2>
+                <button class="modal-close" id="close-results">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="results-grid">
+                    <div class="result-item">
+                        <span class="result-label">Общая доза радиации:</span>
+                        <span class="result-value" id="result-dose">0.000 Гр</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Время миссии:</span>
+                        <span class="result-value" id="result-time">00:00:00</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Максимальный фон:</span>
+                        <span class="result-value" id="result-peak">0.000 мГр/ч</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Пройдено расстояние:</span>
+                        <span class="result-value" id="result-distance">0 а.е.</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Состояние экипажа:</span>
+                        <span class="result-value" id="result-health">Отличное</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Состояние ракеты:</span>
+                        <span class="result-value" id="result-ship">Исправна</span>
+                    </div>
+                </div>
+                
+                <div class="result-message" id="result-message">
+                    <p>Миссия завершена успешно! Уровень радиации в пределах допустимого.</p>
+                </div>
+                
+                <div class="mission-rating">
+                    <h3>Оценка миссии:</h3>
+                    <div class="stars" id="mission-stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="far fa-star"></i>
+                        <i class="far fa-star"></i>
+                    </div>
+                </div>
+                
+                <div class="result-actions">
+                    <button class="btn btn-restart-modal"><i class="fas fa-redo"></i> Новая миссия</button>
+                    <button class="btn btn-theory"><i class="fas fa-book"></i> Изучить теорию</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='game.js') }}"></script>
+{% endblock %}
