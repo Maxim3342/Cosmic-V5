@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalDoseEl = document.getElementById('total-dose');
     const missionTimeEl = document.getElementById('mission-time');
     const statusTextEl = document.getElementById('status-text');
-    const warningOverlay = document.getElementById('warning-overlay');
     const fatalOverlay = document.getElementById('fatal-overlay');
     const positionInfoEl = document.getElementById('position-info');
     const speedInfoEl = document.getElementById('speed-info');
@@ -19,7 +18,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const targetButtons = document.querySelectorAll('.target-btn');
     const landBtn = document.getElementById('land-btn');
     const pauseBtn = document.getElementById('pause-btn');
-    const speedBtn = document.getElementById('speed-btn');
     const autoBtn = document.getElementById('auto-btn');
     const restartBtn = document.getElementById('restart-btn');
     const helpBtn = document.getElementById('help-btn');
@@ -30,12 +28,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const restartModalBtn = document.querySelector('.btn-restart-modal');
     const theoryBtn = document.querySelector('.btn-theory');
     
+    // Новые элементы для системы маршрутов
+    const routeSelector = document.getElementById('route-selector');
+    const routeDirectBtn = document.getElementById('route-direct');
+    const routeSafeBtn = document.getElementById('route-safe');
+    
     // Игровые переменные
     let gameState = {
         missionStarted: false,
         missionPaused: false,
         missionComplete: false,
-        gameSpeed: 1,
         currentPlanet: null,
         targetPlanet: null,
         shipPosition: { x: 600, y: 350 },
@@ -47,7 +49,6 @@ document.addEventListener('DOMContentLoaded', function() {
         missionStartTime: null,
         currentTime: 0,
         lastUpdate: Date.now(),
-        warningShown: false,
         fatalShown: false,
         planets: [],
         trajectory: [],
@@ -56,20 +57,22 @@ document.addEventListener('DOMContentLoaded', function() {
         shieldLevel: 100,
         autoPilot: false,
         currentSpeed: 0,
-        maxPeakRadiation: 0
+        maxPeakRadiation: 0,
+        routeType: null, // 'direct', 'safe', или null
+        controlPoints: [] // Точки для безопасного маршрута
     };
     
-    // Данные планет
+    // Обновленные данные планет
     const planetsData = {
-        sun: { name: 'Солнце', radius: 50, color: '#FFD700', orbitRadius: 0, radiation: 10000 },
-        mercury: { name: 'Меркурий', radius: 8, color: '#A9A9A9', orbitRadius: 100, radiation: 0.5 },
-        venus: { name: 'Венера', radius: 12, color: '#FFA500', orbitRadius: 150, radiation: 0.2 },
-        earth: { name: 'Земля', radius: 13, color: '#1E90FF', orbitRadius: 200, radiation: 0.1, hasBelts: true },
-        moon: { name: 'Луна', radius: 5, color: '#C0C0C0', orbitRadius: 220, radiation: 0.3 },
-        mars: { name: 'Марс', radius: 11, color: '#FF4500', orbitRadius: 280, radiation: 0.4 },
-        jupiter: { name: 'Юпитер', radius: 30, color: '#FFA07A', orbitRadius: 400, radiation: 10, hasBelts: true },
-        saturn: { name: 'Сатурн', radius: 25, color: '#F0E68C', orbitRadius: 500, radiation: 5 },
-        iss: { name: 'МКС', radius: 3, color: '#FFFFFF', orbitRadius: 205, radiation: 0.5 }
+        sun: { name: 'Солнце', radius: 35, color: '#FFD700', orbitRadius: 0, radiation: 10000 },
+        mercury: { name: 'Меркурий', radius: 8, color: '#A9A9A9', orbitRadius: 60, radiation: 0.5 },
+        venus: { name: 'Венера', radius: 10, color: '#FFA500', orbitRadius: 90, radiation: 0.2 },
+        earth: { name: 'Земля', radius: 12, color: '#1E90FF', orbitRadius: 120, radiation: 0.1, hasBelts: true },
+        moon: { name: 'Луна', radius: 4, color: '#C0C0C0', orbitRadius: 0, radiation: 0.3, parent: 'earth', distance: 40 },
+        mars: { name: 'Марс', radius: 10, color: '#FF4500', orbitRadius: 160, radiation: 0.4 },
+        jupiter: { name: 'Юпитер', radius: 20, color: '#FFA07A', orbitRadius: 210, radiation: 10, hasBelts: true },
+        saturn: { name: 'Сатурн', radius: 18, color: '#F0E68C', orbitRadius: 260, radiation: 5 },
+        iss: { name: 'МКС', radius: 4, color: '#FFFFFF', orbitRadius: 125, radiation: 0.5 }
     };
     
     // Инициализация игры
@@ -78,7 +81,6 @@ document.addEventListener('DOMContentLoaded', function() {
             missionStarted: false,
             missionPaused: false,
             missionComplete: false,
-            gameSpeed: 1,
             currentPlanet: null,
             targetPlanet: null,
             shipPosition: { x: 600, y: 350 },
@@ -90,7 +92,6 @@ document.addEventListener('DOMContentLoaded', function() {
             missionStartTime: null,
             currentTime: 0,
             lastUpdate: Date.now(),
-            warningShown: false,
             fatalShown: false,
             planets: [],
             trajectory: [],
@@ -99,19 +100,21 @@ document.addEventListener('DOMContentLoaded', function() {
             shieldLevel: 100,
             autoPilot: false,
             currentSpeed: 0,
-            maxPeakRadiation: 0
+            maxPeakRadiation: 0,
+            routeType: null,
+            controlPoints: []
         };
         
         initPlanets();
         updateUI();
         statusTextEl.textContent = 'Выберите стартовую позицию';
         landBtn.disabled = true;
+        routeSelector.style.display = 'none';
         
         // Активировать кнопки старта
         startButtons.forEach(btn => btn.disabled = false);
         targetButtons.forEach(btn => btn.disabled = true);
         
-        warningOverlay.style.display = 'none';
         fatalOverlay.style.display = 'none';
         resultsModal.style.display = 'none';
         
@@ -121,18 +124,37 @@ document.addEventListener('DOMContentLoaded', function() {
     // Инициализация планет
     function initPlanets() {
         gameState.planets = [];
+        
+        // Сначала создаем все планеты, кроме Луны
         for (const [key, data] of Object.entries(planetsData)) {
+            if (key === 'moon') continue; // Луну создадим отдельно
+            
             const angle = Math.random() * Math.PI * 2;
             const planet = {
                 ...data,
                 id: key,
                 angle: angle,
-                angleSpeed: 0.001 / Math.sqrt(data.orbitRadius),
+                angleSpeed: 0.001 / Math.sqrt(data.orbitRadius || 1),
                 x: 600 + Math.cos(angle) * data.orbitRadius,
                 y: 350 + Math.sin(angle) * data.orbitRadius
             };
             gameState.planets.push(planet);
         }
+        
+        // Теперь создаем Луну как спутник Земли
+        const earth = gameState.planets.find(p => p.id === 'earth');
+        const moonData = planetsData.moon;
+        const moonAngle = Math.random() * Math.PI * 2;
+        
+        const moon = {
+            ...moonData,
+            id: 'moon',
+            angle: moonAngle,
+            angleSpeed: 0.02,
+            x: earth.x + Math.cos(moonAngle) * moonData.distance,
+            y: earth.y + Math.sin(moonAngle) * moonData.distance
+        };
+        gameState.planets.push(moon);
     }
     
     // Игровой цикл
@@ -151,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
         gameState.lastUpdate = now;
         
         if (gameState.missionStarted) {
-            gameState.currentTime += deltaTime * gameState.gameSpeed;
+            gameState.currentTime += deltaTime;
             updatePlanets(deltaTime);
             updateShip(deltaTime);
             updateRadiation(deltaTime);
@@ -163,8 +185,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Обновление планет
     function updatePlanets(deltaTime) {
         for (const planet of gameState.planets) {
-            if (planet.orbitRadius > 0) {
-                planet.angle += planet.angleSpeed * deltaTime * gameState.gameSpeed;
+            // Если это Луна - обновляем относительно Земли
+            if (planet.id === 'moon') {
+                const earth = gameState.planets.find(p => p.id === 'earth');
+                if (earth) {
+                    planet.angle += planet.angleSpeed * deltaTime;
+                    planet.x = earth.x + Math.cos(planet.angle) * planet.distance;
+                    planet.y = earth.y + Math.sin(planet.angle) * planet.distance;
+                }
+            }
+            // Для остальных планет с орбитой
+            else if (planet.orbitRadius > 0) {
+                planet.angle += planet.angleSpeed * deltaTime;
                 planet.x = 600 + Math.cos(planet.angle) * planet.orbitRadius;
                 planet.y = 350 + Math.sin(planet.angle) * planet.orbitRadius;
             }
@@ -176,7 +208,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (gameState.autoPilot && !gameState.shipOnOrbit && gameState.targetPlanet) {
             autoNavigate(deltaTime);
         } else if (!gameState.shipOnOrbit && gameState.targetPlanet) {
-            manualNavigate(deltaTime);
+            if (gameState.routeType === 'direct') {
+                directNavigate(deltaTime);
+            } else if (gameState.routeType === 'safe') {
+                safeNavigate(deltaTime);
+            }
         }
         
         // Обновление скорости
@@ -185,75 +221,109 @@ document.addEventListener('DOMContentLoaded', function() {
         );
     }
     
-    // Ручная навигация
-    function manualNavigate(deltaTime) {
+    // Прямой маршрут (быстрый и опасный)
+    function directNavigate(deltaTime) {
         const target = gameState.planets.find(p => p.id === gameState.targetPlanet);
         const dx = target.x - gameState.shipPosition.x;
         const dy = target.y - gameState.shipPosition.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        if (distance < target.radius + 15) {
+        if (distance < target.radius + 25) {
             // Достигли цели
-            gameState.currentPlanet = gameState.targetPlanet;
-            gameState.targetPlanet = null;
-            gameState.shipOnOrbit = true;
-            gameState.shipVelocity = { x: 0, y: 0 };
-            statusTextEl.textContent = `Достигнута орбита ${target.name}`;
-            landBtn.disabled = false;
-            targetButtons.forEach(btn => btn.disabled = false);
+            completeArrival(target);
         } else {
-            // Двигаемся к цели
-            const speed = 50 + (gameState.autoPilot ? 20 : 0);
+            // Летим прямо к цели
+            const speed = 60; // Быстрая скорость
             gameState.shipVelocity.x = (dx / distance) * speed;
             gameState.shipVelocity.y = (dy / distance) * speed;
-            gameState.shipPosition.x += gameState.shipVelocity.x * deltaTime * gameState.gameSpeed;
-            gameState.shipPosition.y += gameState.shipVelocity.y * deltaTime * gameState.gameSpeed;
+            gameState.shipPosition.x += gameState.shipVelocity.x * deltaTime;
+            gameState.shipPosition.y += gameState.shipVelocity.y * deltaTime;
+            
+            // Сохраняем траекторию для отрисовки
+            if (Math.random() < 0.1) {
+                gameState.trajectory.push({x: gameState.shipPosition.x, y: gameState.shipPosition.y});
+                if (gameState.trajectory.length > 50) gameState.trajectory.shift();
+            }
         }
     }
     
-    // Автонавигация (избегает радиационные пояса)
+    // Безопасный маршрут (долгий и безопасный)
+    function safeNavigate(deltaTime) {
+        const target = gameState.planets.find(p => p.id === gameState.targetPlanet);
+        const dx = target.x - gameState.shipPosition.x;
+        const dy = target.y - gameState.shipPosition.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < target.radius + 25) {
+            // Достигли цели
+            completeArrival(target);
+        } else {
+            // Если контрольные точки не рассчитаны - рассчитываем
+            if (gameState.controlPoints.length === 0) {
+                calculateSafeRoute();
+            }
+            
+            // Летим к следующей контрольной точке
+            const nextPoint = gameState.controlPoints[0];
+            const pointDx = nextPoint.x - gameState.shipPosition.x;
+            const pointDy = nextPoint.y - gameState.shipPosition.y;
+            const pointDist = Math.sqrt(pointDx * pointDx + pointDy * pointDy);
+            
+            if (pointDist < 20) {
+                // Достигли контрольной точки, переходим к следующей
+                gameState.controlPoints.shift();
+                if (gameState.controlPoints.length === 0) return;
+            }
+            
+            // Двигаемся к контрольной точке
+            const speed = 40; // Медленная скорость для безопасного маршрута
+            gameState.shipVelocity.x = (pointDx / pointDist) * speed;
+            gameState.shipVelocity.y = (pointDy / pointDist) * speed;
+            gameState.shipPosition.x += gameState.shipVelocity.x * deltaTime;
+            gameState.shipPosition.y += gameState.shipVelocity.y * deltaTime;
+            
+            // Сохраняем траекторию
+            if (Math.random() < 0.1) {
+                gameState.trajectory.push({x: gameState.shipPosition.x, y: gameState.shipPosition.y});
+                if (gameState.trajectory.length > 100) gameState.trajectory.shift();
+            }
+        }
+    }
+    
+    // Автонавигация
     function autoNavigate(deltaTime) {
         const target = gameState.planets.find(p => p.id === gameState.targetPlanet);
         const dx = target.x - gameState.shipPosition.x;
         const dy = target.y - gameState.shipPosition.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        if (distance < target.radius + 15) {
+        if (distance < target.radius + 25) {
             // Достигли цели
-            gameState.currentPlanet = gameState.targetPlanet;
-            gameState.targetPlanet = null;
-            gameState.shipOnOrbit = true;
-            gameState.shipVelocity = { x: 0, y: 0 };
-            statusTextEl.textContent = `Достигнута орбита ${target.name} (автопилот)`;
-            landBtn.disabled = false;
-            targetButtons.forEach(btn => btn.disabled = false);
+            completeArrival(target, true);
         } else {
             // Избегаем радиационные пояса
             let avoidX = 0, avoidY = 0;
             
-            // Избегаем Землю и Юпитер (и их пояса)
-            if (gameState.currentPlanet !== 'earth' && gameState.currentPlanet !== 'jupiter') {
-                const earth = gameState.planets.find(p => p.id === 'earth');
-                const earthDist = Math.sqrt(
-                    Math.pow(gameState.shipPosition.x - earth.x, 2) +
-                    Math.pow(gameState.shipPosition.y - earth.y, 2)
-                );
-                
-                if (earthDist < 250) {
-                    avoidX += (gameState.shipPosition.x - earth.x) / earthDist * 100;
-                    avoidY += (gameState.shipPosition.y - earth.y) / earthDist * 100;
-                }
-                
-                const jupiter = gameState.planets.find(p => p.id === 'jupiter');
-                const jupiterDist = Math.sqrt(
-                    Math.pow(gameState.shipPosition.x - jupiter.x, 2) +
-                    Math.pow(gameState.shipPosition.y - jupiter.y, 2)
-                );
-                
-                if (jupiterDist < 450) {
-                    avoidX += (gameState.shipPosition.x - jupiter.x) / jupiterDist * 150;
-                    avoidY += (gameState.shipPosition.y - jupiter.y) / jupiterDist * 150;
-                }
+            const earth = gameState.planets.find(p => p.id === 'earth');
+            const earthDist = Math.sqrt(
+                Math.pow(gameState.shipPosition.x - earth.x, 2) +
+                Math.pow(gameState.shipPosition.y - earth.y, 2)
+            );
+            
+            if (earthDist < 170) {
+                avoidX += (gameState.shipPosition.x - earth.x) / earthDist * 100;
+                avoidY += (gameState.shipPosition.y - earth.y) / earthDist * 100;
+            }
+            
+            const jupiter = gameState.planets.find(p => p.id === 'jupiter');
+            const jupiterDist = Math.sqrt(
+                Math.pow(gameState.shipPosition.x - jupiter.x, 2) +
+                Math.pow(gameState.shipPosition.y - jupiter.y, 2)
+            );
+            
+            if (jupiterDist < 290) {
+                avoidX += (gameState.shipPosition.x - jupiter.x) / jupiterDist * 150;
+                avoidY += (gameState.shipPosition.y - jupiter.y) / jupiterDist * 150;
             }
             
             // Двигаемся к цели с учетом избегания
@@ -271,9 +341,75 @@ document.addEventListener('DOMContentLoaded', function() {
             gameState.shipVelocity.x = (gameState.shipVelocity.x / velLength) * speed;
             gameState.shipVelocity.y = (gameState.shipVelocity.y / velLength) * speed;
             
-            gameState.shipPosition.x += gameState.shipVelocity.x * deltaTime * gameState.gameSpeed;
-            gameState.shipPosition.y += gameState.shipVelocity.y * deltaTime * gameState.gameSpeed;
+            gameState.shipPosition.x += gameState.shipVelocity.x * deltaTime;
+            gameState.shipPosition.y += gameState.shipVelocity.y * deltaTime;
         }
+    }
+    
+    // Расчет безопасного маршрута
+    function calculateSafeRoute() {
+        const start = gameState.planets.find(p => p.id === gameState.currentPlanet);
+        const target = gameState.planets.find(p => p.id === gameState.targetPlanet);
+        
+        if (!start || !target) return;
+        
+        gameState.controlPoints = [];
+        
+        // Вычисляем точки для обхода опасных зон
+        const earth = gameState.planets.find(p => p.id === 'earth');
+        const jupiter = gameState.planets.find(p => p.id === 'jupiter');
+        
+        // Точка 1: Начальная позиция (немного в сторону от прямой линии)
+        const angle = Math.atan2(target.y - start.y, target.x - start.x);
+        const offset1 = Math.PI / 6; // 30 градусов
+        
+        // Если цель - не Земля, обходим Землю
+        if (gameState.targetPlanet !== 'earth' && gameState.currentPlanet !== 'earth') {
+            const earthAngle = Math.atan2(earth.y - start.y, earth.x - start.x);
+            const point1 = {
+                x: start.x + Math.cos(earthAngle + offset1) * 100,
+                y: start.y + Math.sin(earthAngle + offset1) * 100
+            };
+            gameState.controlPoints.push(point1);
+            
+            // Точка 2: Облетаем Землю на безопасном расстоянии
+            const point2 = {
+                x: earth.x + Math.cos(earthAngle + Math.PI/2) * 150,
+                y: earth.y + Math.sin(earthAngle + Math.PI/2) * 150
+            };
+            gameState.controlPoints.push(point2);
+        }
+        
+        // Если цель - Юпитер или дальше, обходим радиационный пояс Юпитера
+        if (gameState.targetPlanet === 'jupiter' || gameState.targetPlanet === 'saturn') {
+            const jupiterAngle = Math.atan2(jupiter.y - start.y, jupiter.x - start.x);
+            const point3 = {
+                x: jupiter.x + Math.cos(jupiterAngle - Math.PI/3) * 200,
+                y: jupiter.y + Math.sin(jupiterAngle - Math.PI/3) * 200
+            };
+            gameState.controlPoints.push(point3);
+        }
+        
+        // Финальная точка: сама цель
+        gameState.controlPoints.push({x: target.x, y: target.y});
+    }
+    
+    // Завершение прибытия к цели
+    function completeArrival(target, isAutoPilot = false) {
+        gameState.currentPlanet = gameState.targetPlanet;
+        gameState.targetPlanet = null;
+        gameState.shipOnOrbit = true;
+        gameState.shipVelocity = { x: 0, y: 0 };
+        gameState.controlPoints = [];
+        gameState.trajectory = [];
+        
+        statusTextEl.textContent = isAutoPilot ? 
+            `Достигнута орбита ${target.name} (автопилот)` : 
+            `Достигнута орбита ${target.name}`;
+        
+        landBtn.disabled = false;
+        targetButtons.forEach(btn => btn.disabled = false);
+        routeSelector.style.display = 'none';
     }
     
     // Обновление радиации
@@ -295,7 +431,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 Math.pow(gameState.shipPosition.x - earth.x, 2) +
                 Math.pow(gameState.shipPosition.y - earth.y, 2)
             );
-            if (distToEarth > 180 && distToEarth < 220) {
+            if (distToEarth > (earth.orbitRadius + 30) && distToEarth < (earth.orbitRadius + 50)) {
                 beltRadiation += 5;
             }
         }
@@ -305,12 +441,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 Math.pow(gameState.shipPosition.x - jupiter.x, 2) +
                 Math.pow(gameState.shipPosition.y - jupiter.y, 2)
             );
-            if (distToJupiter > 380 && distToJupiter < 420) {
+            if (distToJupiter > 250 && distToJupiter < 280) {
                 beltRadiation += 20;
             }
         }
         
-        // Солнечные вспышки
+        // Солнечные вспышки (система событий будет добавлена позже)
         let solarFlareRadiation = 0;
         if (gameState.solarFlareActive) {
             solarFlareRadiation = 30;
@@ -318,15 +454,20 @@ document.addEventListener('DOMContentLoaded', function() {
             if (gameState.solarFlareTime <= 0) {
                 gameState.solarFlareActive = false;
             }
-        } else if (Math.random() < 0.0001 * gameState.gameSpeed) {
-            gameState.solarFlareActive = true;
-            gameState.solarFlareTime = 8;
         }
         
-        // Радиация во время полета
+        // Радиация во время полета зависит от типа маршрута
         let flightRadiation = 0;
         if (!gameState.shipOnOrbit) {
-            flightRadiation = gameState.autoPilot ? 1 : 3;
+            if (gameState.routeType === 'direct') {
+                flightRadiation = 5; // Высокая радиация на прямом маршруте
+            } else if (gameState.routeType === 'safe') {
+                flightRadiation = 1; // Низкая радиация на безопасном маршруте
+            }
+            
+            if (gameState.autoPilot) {
+                flightRadiation *= 0.7; // Автопилот немного снижает радиацию
+            }
         }
         
         // Эффект защиты
@@ -341,18 +482,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Накопление дозы
         const doseRate = gameState.radiationLevel * 0.000001;
-        gameState.totalDose += doseRate * deltaTime * gameState.gameSpeed;
+        gameState.totalDose += doseRate * deltaTime;
         
         // Обновление максимального пика
         if (gameState.radiationLevel > gameState.maxPeakRadiation) {
             gameState.maxPeakRadiation = gameState.radiationLevel;
         }
         
-        // Предупреждения
-        if (gameState.radiationLevel > 10 && !gameState.warningShown) {
-            showWarning();
-        }
-        
+        // Проверка смертельной дозы
         if (gameState.totalDose > 5 && !gameState.fatalShown) {
             showFatal();
         }
@@ -394,6 +531,27 @@ document.addEventListener('DOMContentLoaded', function() {
         shieldInfoEl.textContent = `${Math.round(gameState.shieldLevel)}%`;
         shieldInfoEl.style.color = gameState.shieldLevel > 50 ? 'var(--safe)' : 
                                   gameState.shieldLevel > 20 ? 'var(--warning)' : 'var(--danger)';
+        
+        // Отображение типа маршрута
+        if (gameState.routeType) {
+            const routeInfo = document.getElementById('route-info') || (() => {
+                const info = document.createElement('div');
+                info.id = 'route-info';
+                info.style.marginTop = '10px';
+                info.style.fontSize = '0.9em';
+                return info;
+            })();
+            
+            if (gameState.routeType === 'direct') {
+                routeInfo.innerHTML = '<i class="fas fa-bolt" style="color:#ff4444"></i> Маршрут: <span style="color:#ff4444">Быстрый и опасный</span>';
+            } else {
+                routeInfo.innerHTML = '<i class="fas fa-shield-alt" style="color:var(--safe)"></i> Маршрут: <span style="color:var(--safe)">Долгий и безопасный</span>';
+            }
+            
+            if (!document.getElementById('route-info')) {
+                document.querySelector('.state-info').appendChild(routeInfo);
+            }
+        }
     }
     
     // Отрисовка игры
@@ -405,16 +563,24 @@ document.addEventListener('DOMContentLoaded', function() {
         // Звезды
         drawStars();
         
-        // Орбиты
+        // Орбиты (только для основных планет)
         drawOrbits();
+        
+        // Радиационные пояса
+        drawRadiationBelts();
         
         // Планеты
         for (const planet of gameState.planets) {
             drawPlanet(planet);
         }
         
-        // Радиационные пояса
-        drawRadiationBelts();
+        // Траектория полета
+        drawTrajectory();
+        
+        // Контрольные точки безопасного маршрута
+        if (gameState.routeType === 'safe' && gameState.controlPoints.length > 0) {
+            drawControlPoints();
+        }
         
         // Корабль
         if (gameState.missionStarted) {
@@ -441,14 +607,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function drawOrbits() {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 1.5;
+        
+        // Рисуем орбиты только для основных планет (не для Луны и МКС)
+        const orbitRadii = [];
+        
         for (const planet of gameState.planets) {
-            if (planet.orbitRadius > 0) {
-                ctx.beginPath();
-                ctx.arc(600, 350, planet.orbitRadius, 0, Math.PI * 2);
-                ctx.stroke();
+            if (planet.orbitRadius > 0 && planet.id !== 'moon' && planet.id !== 'iss') {
+                if (!orbitRadii.includes(planet.orbitRadius)) {
+                    orbitRadii.push(planet.orbitRadius);
+                }
             }
+        }
+        
+        orbitRadii.sort((a, b) => a - b);
+        
+        for (const radius of orbitRadii) {
+            ctx.beginPath();
+            ctx.arc(600, 350, radius, 0, Math.PI * 2);
+            ctx.stroke();
         }
     }
     
@@ -493,25 +671,75 @@ document.addEventListener('DOMContentLoaded', function() {
         const earth = gameState.planets.find(p => p.id === 'earth');
         if (earth) {
             ctx.beginPath();
-            ctx.arc(600, 350, 180, 0, Math.PI * 2);
+            ctx.arc(600, 350, earth.orbitRadius + 30, 0, Math.PI * 2);
             ctx.stroke();
             
             ctx.beginPath();
-            ctx.arc(600, 350, 220, 0, Math.PI * 2);
+            ctx.arc(600, 350, earth.orbitRadius + 50, 0, Math.PI * 2);
             ctx.stroke();
         }
         
         // Радиация Юпитера
         ctx.strokeStyle = 'rgba(255, 100, 100, 0.4)';
         ctx.beginPath();
-        ctx.arc(600, 350, 380, 0, Math.PI * 2);
+        ctx.arc(600, 350, 250, 0, Math.PI * 2);
         ctx.stroke();
         
         ctx.beginPath();
-        ctx.arc(600, 350, 420, 0, Math.PI * 2);
+        ctx.arc(600, 350, 280, 0, Math.PI * 2);
         ctx.stroke();
         
         ctx.setLineDash([]);
+    }
+    
+    function drawTrajectory() {
+        if (gameState.trajectory.length > 1) {
+            ctx.strokeStyle = gameState.routeType === 'direct' ? 'rgba(255, 68, 68, 0.6)' : 'rgba(76, 175, 80, 0.6)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(gameState.trajectory[0].x, gameState.trajectory[0].y);
+            
+            for (let i = 1; i < gameState.trajectory.length; i++) {
+                ctx.lineTo(gameState.trajectory[i].x, gameState.trajectory[i].y);
+            }
+            ctx.stroke();
+        }
+    }
+    
+    function drawControlPoints() {
+        // Рисуем контрольные точки безопасного маршрута
+        ctx.fillStyle = 'rgba(76, 175, 80, 0.3)';
+        ctx.strokeStyle = 'rgba(76, 175, 80, 0.6)';
+        ctx.lineWidth = 1;
+        
+        for (let i = 0; i < gameState.controlPoints.length; i++) {
+            const point = gameState.controlPoints[i];
+            
+            // Точка
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Номер точки
+            ctx.fillStyle = '#FFF';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText((i + 1).toString(), point.x, point.y);
+            ctx.fillStyle = 'rgba(76, 175, 80, 0.3)';
+            
+            // Линия к следующей точке
+            if (i < gameState.controlPoints.length - 1) {
+                const nextPoint = gameState.controlPoints[i + 1];
+                ctx.beginPath();
+                ctx.moveTo(point.x, point.y);
+                ctx.lineTo(nextPoint.x, nextPoint.y);
+                ctx.setLineDash([5, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
     }
     
     function drawShip() {
@@ -520,9 +748,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const time = Date.now() / 1000;
         
         // Основной корпус
-        ctx.fillStyle = gameState.autoPilot ? '#00d4ff' : '#6c63ff';
+        ctx.fillStyle = gameState.autoPilot ? '#00d4ff' : 
+                       gameState.routeType === 'direct' ? '#ff4444' : '#6c63ff';
         ctx.beginPath();
-        ctx.ellipse(shipX, shipY, 10, 5, 0, 0, Math.PI * 2);
+        ctx.ellipse(shipX, shipY, 12, 6, 0, 0, Math.PI * 2);
         ctx.fill();
         
         // Вращающееся кольцо
@@ -534,14 +763,14 @@ document.addEventListener('DOMContentLoaded', function() {
                          gameState.shieldLevel > 20 ? '#ff9800' : '#f44336';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(0, 0, 8, 0, Math.PI * 2);
+        ctx.arc(0, 0, 10, 0, Math.PI * 2);
         ctx.stroke();
         
         // Двигатели
         if (!gameState.shipOnOrbit) {
-            ctx.fillStyle = '#ff6584';
+            ctx.fillStyle = gameState.routeType === 'direct' ? '#ff8888' : '#ff6584';
             ctx.beginPath();
-            ctx.ellipse(-8, 0, 3, 5, 0, 0, Math.PI * 2);
+            ctx.ellipse(-10, 0, 4, 6, 0, 0, Math.PI * 2);
             ctx.fill();
         }
         
@@ -550,7 +779,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Цель
         if (gameState.targetPlanet) {
             const target = gameState.planets.find(p => p.id === gameState.targetPlanet);
-            ctx.strokeStyle = '#00ff00';
+            ctx.strokeStyle = gameState.routeType === 'direct' ? '#ff4444' : '#00ff00';
             ctx.lineWidth = 1;
             ctx.setLineDash([5, 5]);
             ctx.beginPath();
@@ -606,15 +835,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return 'var(--safe)';
     }
     
-    // Предупреждения
-    function showWarning() {
-        gameState.warningShown = true;
-        warningOverlay.style.display = 'block';
-        setTimeout(() => {
-            warningOverlay.style.display = 'none';
-        }, 5000);
-    }
-    
+    // Фатальная ошибка
     function showFatal() {
         gameState.fatalShown = true;
         gameState.missionComplete = true;
@@ -655,6 +876,11 @@ document.addEventListener('DOMContentLoaded', function() {
         else if (gameState.totalDose < 0.5) stars = 4;
         else if (gameState.totalDose > 3) stars = 1;
         else if (gameState.totalDose > 1) stars = 2;
+        
+        // Бонус за безопасный маршрут
+        if (gameState.routeType === 'safe' && gameState.totalDose < 1) {
+            stars = Math.min(5, stars + 1);
+        }
         
         // Заполнение результатов
         document.getElementById('result-dose').textContent = gameState.totalDose.toFixed(3) + ' Гр';
@@ -735,14 +961,41 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             gameState.targetPlanet = targetId;
-            gameState.shipOnOrbit = false;
             gameState.trajectory.push({...gameState.shipPosition});
             
             const travelTime = Math.random() * 2 + 1;
-            statusTextEl.textContent = `Курс на ${target.name}. Время полета: ${travelTime.toFixed(1)} лет.`;
+            statusTextEl.textContent = `Цель: ${target.name}. Выберите маршрут.`;
             landBtn.disabled = true;
             targetButtons.forEach(b => b.disabled = true);
+            
+            // Показываем выбор маршрута
+            routeSelector.style.display = 'block';
         });
+    });
+    
+    // Кнопка прямого маршрута
+    routeDirectBtn.addEventListener('click', function() {
+        if (!gameState.targetPlanet) return;
+        
+        gameState.routeType = 'direct';
+        gameState.shipOnOrbit = false;
+        routeSelector.style.display = 'none';
+        
+        const target = gameState.planets.find(p => p.id === gameState.targetPlanet);
+        statusTextEl.textContent = `Прямой маршрут на ${target.name}. Высокий риск радиации!`;
+    });
+    
+    // Кнопка безопасного маршрута
+    routeSafeBtn.addEventListener('click', function() {
+        if (!gameState.targetPlanet) return;
+        
+        gameState.routeType = 'safe';
+        gameState.shipOnOrbit = false;
+        gameState.controlPoints = []; // Сброс контрольных точек
+        routeSelector.style.display = 'none';
+        
+        const target = gameState.planets.find(p => p.id === gameState.targetPlanet);
+        statusTextEl.textContent = `Безопасный маршрут на ${target.name}. Обход опасных зон.`;
     });
     
     // Кнопка посадки
@@ -760,27 +1013,24 @@ document.addEventListener('DOMContentLoaded', function() {
             '<i class="fas fa-pause"></i><span>Пауза</span>';
     });
     
-    // Кнопка скорости
-    speedBtn.addEventListener('click', function() {
-        const speeds = [1, 10, 100, 1000];
-        const currentIndex = speeds.indexOf(gameState.gameSpeed);
-        gameState.gameSpeed = speeds[(currentIndex + 1) % speeds.length];
-        this.innerHTML = `<i class="fas fa-tachometer-alt"></i><span>Скорость: ${gameState.gameSpeed}x</span>`;
-    });
-    
     // Кнопка автопилота
     autoBtn.addEventListener('click', function() {
         if (!gameState.missionStarted || gameState.shipOnOrbit) return;
         
-        gameState.autoPilot = !gameState.autoPilot;
-        this.innerHTML = gameState.autoPilot ? 
-            '<i class="fas fa-user"></i><span>Ручное управление</span>' : 
-            '<i class="fas fa-robot"></i><span>Автополет</span>';
-        this.style.background = gameState.autoPilot ? 'var(--neon-blue)' : 'var(--primary)';
-        
-        statusTextEl.textContent = gameState.autoPilot ? 
-            'Автопилот активирован. Избегание радиационных поясов.' : 
-            'Ручное управление. Будьте осторожны с радиацией!';
+        // Автопилот доступен только для безопасного маршрута
+        if (gameState.routeType === 'safe') {
+            gameState.autoPilot = !gameState.autoPilot;
+            this.innerHTML = gameState.autoPilot ? 
+                '<i class="fas fa-user"></i><span>Ручное управление</span>' : 
+                '<i class="fas fa-robot"></i><span>Автопилот</span>';
+            this.style.background = gameState.autoPilot ? 'var(--neon-blue)' : 'var(--primary)';
+            
+            statusTextEl.textContent = gameState.autoPilot ? 
+                'Автопилот активирован. Избегание радиационных поясов.' : 
+                'Ручное управление безопасным маршрутом.';
+        } else {
+            statusTextEl.textContent = 'Автопилот доступен только для безопасного маршрута!';
+        }
     });
     
     // Кнопка помощи

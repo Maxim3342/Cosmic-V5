@@ -49,22 +49,22 @@
                     <button class="planet-btn" data-planet="earth">
                         <i class="fas fa-globe-americas"></i>
                         <span>Земля</span>
-                        <small>0.1 мГр/ч</small>
+            
                     </button>
                     <button class="planet-btn" data-planet="mars">
                         <i class="fas fa-globe-asia"></i>
                         <span>Марс</span>
-                        <small>0.4 мГр/ч</small>
+                        
                     </button>
                     <button class="planet-btn" data-planet="moon">
                         <i class="fas fa-moon"></i>
                         <span>Луна</span>
-                        <small>0.3 мГр/ч</small>
+                        
                     </button>
                     <button class="planet-btn" data-planet="iss">
                         <i class="fas fa-satellite"></i>
                         <span>МКС</span>
-                        <small>0.5 мГр/ч</small>
+                        
                     </button>
                 </div>
             </div>
@@ -109,6 +109,22 @@
                     </button>
                 </div>
             </div>
+
+                    <div class="control-group" id="route-selector" style="display: none;">
+            <h3><i class="fas fa-route"></i> Выбор маршрута</h3>
+            <div class="route-buttons">
+                <button class="btn btn-action" id="route-direct">
+                    <i class="fas fa-bolt"></i>
+                    <span>Быстрый и опасный</span>
+                    <small>Прямой полет, высокая радиация</small>
+                </button>
+                <button class="btn btn-action" id="route-safe">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Долгий и безопасный</span>
+                    <small>Обход опасных зон, меньше радиации</small>
+                </button>
+            </div>
+        </div>
             
             <div class="control-group">
                 <h3><i class="fas fa-chart-line"></i> Шкала радиации</h3>
@@ -152,10 +168,7 @@
                         <i class="fas fa-pause"></i>
                         <span>Пауза</span>
                     </button>
-                    <button class="btn btn-action" id="speed-btn">
-                        <i class="fas fa-tachometer-alt"></i>
-                        <span>Скорость игры: 1x</span>
-                    </button>
+                    
                     <button class="btn btn-action" id="auto-btn">
                         <i class="fas fa-robot"></i>
                         <span>Автополет, пока не реализован</span>
@@ -201,11 +214,27 @@
                 <p>4. Для завершения миссии нажмите "Завершить миссию"</p>
                 <p><strong>Цель:</strong> доставить ракету на другую планету с минимальной дозой радиации</p>
                 
-                <div class="tips">
-                    <h3><i class="fas fa-lightbulb"></i> Советы:</h3>
+                                <div class="tips">
+                    <h3><i class="fas fa-lightbulb"></i> Как играть:</h3>
+                    <ol>
+                        <li><strong>Выберите стартовую позицию</strong> - Земля, Марс, Луна или МКС</li>
+                        <li><strong>Выберите цель полета</strong> - любую планету в Солнечной системе</li>
+                        <li><strong>Выберите маршрут:</strong>
+                            <ul>
+                                <li><span style="color:#ff4444">Быстрый и опасный</span> - прямой полет, высокая радиация</li>
+                                <li><span style="color:var(--safe)">Долгий и безопасный</span> - обход опасных зон, меньше радиации</li>
+                            </ul>
+                        </li>
+                        <li><strong>Следите за уровнем радиации</strong> - не превышайте 1 Гр</li>
+                        <li><strong>Используйте автопилот</strong> - доступен только для безопасного маршрута</li>
+                        <li><strong>Завершите миссию</strong> - когда достигнете цели</li>
+                    </ol>
+                    
+                    <h4><i class="fas fa-exclamation-triangle"></i> Опасности:</h4>
                     <ul>
-                        <li>Прямой полет к Юпитеру наиболее опасен</li>
-                        <li>Завершайте миссию до достижения 1 Гр дозы</li>
+                        <li>Радиационные пояса Земли и Юпитера</li>
+                        <li>Солнечные вспышки (в разработке)</li>
+                        <li>Прямой полет через опасные зоны</li>
                     </ul>
                 </div>
             </div>

@@ -1,0 +1,2 @@
+ПЕРВАЯ (с ВПН) - https://maxim228.pythonanywhere.com/
+ВТОРАЯ (без) - https://cosmic-v5.onrender.com

@@ -482,6 +482,7 @@ color: transparent; /* Альтернатива для других браузе
     z-index: 100;
 }
 
+
 .game-overlay.fatal {
     background: rgba(244, 67, 54, 0.95);
     border-color: var(--danger);
@@ -526,7 +527,7 @@ color: transparent; /* Альтернатива для других браузе
     margin-top: 1rem;
 }
 
-.planet-btn {
+.planet-btn, .target-btn {
     padding: 0.8rem;
     background: rgba(108, 99, 255, 0.1);
     border: 1px solid var(--primary);
@@ -538,6 +539,20 @@ color: transparent; /* Альтернатива для других браузе
     flex-direction: column;
     align-items: center;
     gap: 5px;
+    min-height: 60px;
+    justify-content: center;
+}
+
+.planet-buttons-grid, .target-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.8rem;
+    margin-top: 1rem;
+}
+
+.planet-btn:hover, .target-btn:hover {
+    background: rgba(108, 99, 255, 0.3);
+    transform: scale(1.05);
 }
 
 .planet-btn:hover {
@@ -1047,3 +1062,262 @@ color: transparent; /* Альтернатива для других браузе
         padding: 1.5rem;
     }
 }
+
+/* Стили для модальных окон траекторий и солнечных вспышек */
+
+/* Окно выбора траектории */
+.trajectory-target-info {
+    background: rgba(0, 212, 255, 0.1);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--neon-blue);
+    text-align: center;
+    font-size: 1.1rem;
+}
+
+.trajectory-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.2rem;
+    margin: 1.5rem 0;
+}
+
+.trajectory-option {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 2px solid;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.trajectory-option:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.trajectory-option[data-trajectory="direct"] {
+    border-color: #ff6584;
+}
+
+.trajectory-option[data-trajectory="safe"] {
+    border-color: #4caf50;
+}
+
+.trajectory-option[data-trajectory="gravitational"] {
+    border-color: #6c63ff;
+}
+
+.trajectory-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+}
+
+.trajectory-header i {
+    font-size: 1.5rem;
+}
+
+.trajectory-header h3 {
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+.trajectory-details {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    flex-grow: 1;
+}
+
+.trajectory-details p {
+    margin: 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+}
+
+.trajectory-tip {
+    background: rgba(255, 193, 7, 0.1);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1.5rem;
+    border: 1px solid var(--warning);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95rem;
+}
+
+.trajectory-tip i {
+    color: var(--warning);
+}
+
+/* Окно солнечной вспышки */
+.flare-warning {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding: 1.2rem;
+    background: rgba(255, 152, 0, 0.1);
+    border-radius: 10px;
+    border: 2px solid var(--warning);
+}
+
+.flare-warning p {
+    margin: 0.5rem 0;
+    line-height: 1.4;
+}
+
+.flare-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.flare-action {
+    padding: 1.2rem;
+    background: rgba(108, 99, 255, 0.1);
+    border: 2px solid var(--primary);
+    border-radius: 10px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    height: 100%;
+}
+
+.flare-action:hover {
+    background: rgba(108, 99, 255, 0.2);
+    transform: translateY(-3px);
+}
+
+.flare-action i {
+    font-size: 1.8rem;
+    color: var(--neon-blue);
+}
+
+.flare-action span {
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.flare-action small {
+    color: #aaa;
+    font-size: 0.85rem;
+    line-height: 1.3;
+}
+
+.flare-hint {
+    background: rgba(33, 150, 243, 0.1);
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+    border: 1px solid #2196f3;
+    text-align: center;
+}
+
+#flare-result {
+    font-weight: bold;
+    margin-top: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.flare-timer {
+    margin-top: 1.5rem;
+}
+
+.timer-bar {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    margin: 0.8rem 0;
+    overflow: hidden;
+}
+
+.timer-progress {
+    height: 100%;
+    background: linear-gradient(90deg, var(--warning), var(--danger));
+    width: 100%;
+    animation: flareTimer 15s linear forwards;
+}
+
+@keyframes flareTimer {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+
+/* Уменьшение размера предупреждений */
+.game-overlay {
+    padding: 1.2rem;
+    max-width: 500px;
+}
+
+.game-overlay h3 {
+    font-size: 1.4rem;
+    margin-bottom: 0.5rem;
+}
+
+.game-overlay p {
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Уменьшение размеров игрового поля */
+.game-canvas-container {
+    position: relative;
+    background: black;
+    border-radius: 15px;
+    overflow: hidden;
+    border: 3px solid var(--neon-blue);
+    min-height: 600px;
+    max-height: 600px;
+}
+
+#gameCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .trajectory-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .flare-actions {
+        grid-template-columns: 1fr;
+    }
+    
+    .trajectory-option {
+        padding: 1rem;
+    }
+    
+    .trajectory-header h3 {
+        font-size: 1.1rem;
+    }
+    
+    .trajectory-details p {
+        font-size: 0.9rem;
+    }
+    
+    .game-overlay {
+        padding: 1rem;
+        max-width: 90%;
+    }
+    
+    .game-overlay h3 {
+        font-size: 1.2rem;
+    }
+}
+
